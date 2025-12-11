@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>MiniAmazon — 100 Products (Single File)</title>
+<style>
+  :root{--bg:#f3f6fb;--card:#fff;--muted:#6b7280;--accent:#ff6a00;--accent2:#0b69ff}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Inter,Segoe UI,Arial;background:var(--bg);color:#0b1220}
+  header{background:linear-gradient(90deg,var(--accent),var(--accent2));color:white;padding:12px 18px;display:flex;gap:12px;align-items:center}
+  .brand{font-weight:800;font-size:20px}
+  .search-wrap{flex:1}
+  .search{width:100%;padding:10px 14px;border-radius:8px;border:0}
+  .top-actions{display:flex;gap:10px;align-items:center}
+  .btn{background:var(--card);padding:8px 10px;border-radius:8px;border:0;cursor:pointer}
+  nav{padding:10px 18px;background:#fff;display:flex;gap:8px;align-items:center;overflow:auto}
+  nav button{background:transparent;border:0;padding:8px 12px;border-radius:8px;cursor:pointer}
+  .container{max-width:1180px;margin:18px auto;padding:0 12px}
+  .layout{display:grid;grid-template-columns:260px 1fr;gap:16px}
+  .card{background:var(--card);border-radius:10px;padding:12px;box-shadow:0 6px 18px rgba(2,6,23,0.06)}
+  .filters .row{display:flex;gap:8px;align-items:center;margin:8px 0}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
+  .product{border-radius:10px;overflow:hidden;display:flex;flex-direction:column;background:var(--card)}
+  .product img{width:100%;height:150px;object-fit:cover}
+  .p-body{padding:10px;flex:1;display:flex;flex-direction:column}
+  .p-title{font-weight:700;font-size:14px}
+  .p-cat{font-size:12px;color:var(--muted)}
+  .price{margin-top:6px;font-weight:800}
+  .p-actions{display:flex;gap:8px;margin-top:auto}
+  .badge{background:#fff7ed;color:#9a4b00;padding:4px 6px;border-radius:6px;font-size:12px}
+  .cart-fixed{position:fixed;right:18px;bottom:18px;width:340px;max-height:70vh;overflow:auto}
+  .cart-item{display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid #eee}
+  .modal-back{position:fixed;inset:0;background:rgba(2,6,23,0.5);display:flex;align-items:center;justify-content:center;z-index:999}
+  .modal{width:95%;max-width:900px;background:var(--card);border-radius:8px;padding:16px}
+  .pagination{display:flex;gap:6px;justify-content:center;margin-top:12px}
+  .page-btn{padding:6px 10px;border-radius:6px;border:1px solid #eee;background:transparent;cursor:pointer}
+  footer{padding:18px;text-align:center;color:var(--muted)}
+  @media(max-width:900px){.layout{grid-template-columns:1fr}.cart-fixed{left:8px;right:8px;width:auto}}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">MiniAmazon</div>
+  <div class="search-wrap">
+    <input id="searchInput" class="search" placeholder="Search for products, brands and more..." oninput="onSearch()" />
+  </div>
+  <div class="top-actions">
+    <button class="btn" onclick="openWishlist()">❤️ <span id="wishCount">0</span></button>
+    <button class="btn" onclick="openCart()">🛒 <span id="cartCount">0</span></button>
+    <button class="btn" onclick="toggleTheme()">🌓</button>
+  </div>
+</header>
+<nav>
+  <button onclick="filterCategory('all')">All</button>
+  <button onclick="filterCategory('electronics')">Electronics</button>
+  <button onclick="filterCategory('fashion')">Fashion</button>
+  <button onclick="filterCategory('home')">Home</button>
+  <button onclick="filterCategory('beauty')">Beauty</button>
+  <button onclick="filterCategory('sports')">Sports</button>
+  <div style="margin-left:auto;color:#374151;font-size:14px">Free delivery over ₹999</div>
+</nav>
+<main class="container">
+  <div class="layout">
+    <aside>
+      <div class="card filters">
+        <h4>Filters</h4>
+        <div class="row"><label>Offer only</label><input type="checkbox" id="offerOnly" onchange="applyFilters()" /></div>
+        <div style="margin-top:8px"><label>Max price: <span id="priceVal">2000</span></label>
+          <input type="range" id="priceRange" min="100" max="2000" value="2000" oninput="onPriceChange(this.value)" onchange="applyFilters()" style="width:100%" />
+        </div>
+        <div style="margin-top:8px"><label>Rating</label>
+          <select id="minRating" onchange="applyFilters()"><option value="0">Any</option><option value="3">3★ & up</option><option value="4">4★ & up</option></select>
+        </div>
+        <div style="margin-top:12px"><label>Sort</label>
+          <select id="sortBy" onchange="applyFilters()"><option value="relevance">Relevance</option><option value="price-asc">Price: Low to High</option><option value="price-desc">Price: High to Low</option><option value="rating">Top Rated</option></select>
+        </div>
+      </div>
+      <div class="card" style="margin-top:12px">
+        <h4>Wishlist</h4>
+        <div id="wishListPreview"></div>
+      </div>
+    </aside>
+    <section>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div><strong>Products</strong> <span id="resultsInfo" style="color:var(--muted)"></span></div>
+          <div><label>Per page:</label> <select id="perPage" onchange="changePerPage(this.value)"><option>10</option><option>20</option><option>30</option></select></div>
+        </div>
+        <div id="productGrid" class="grid" style="margin-top:12px"></div>
+        <div class="pagination" id="pagination"></div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<!-- Cart Drawer -->
+<div id="cartDrawer" class="cart-fixed card" style="display:none">
+  <div style="display:flex;justify-content:space-between;align-items:center"><strong>Cart</strong><button onclick="closeCart()" class="btn">Close</button></div>
+  <div id="cartItems" style="margin-top:8px"></div>
+  <div style="margin-top:8px;display:flex;justify-content:space-between;align-items:center"><strong>Total: ₹<span id="cartTotal">0.00</span></strong><div><button class="btn" onclick="openCheckout()">Checkout</button><button class="btn" onclick="clearCart()">Clear</button></div></div>
+</div>
+
+<!-- Modal root -->
+<div id="modalRoot"></div>
+
+<footer>© <span id="year"></span> MiniAmazon demo — Not a real store</footer>
+
+<script>
+// Data: 100 realistic products across categories with images
+const categories = ['electronics','fashion','home','beauty','sports'];
+const namePools = {
+  electronics:['Smartphone','Laptop','Smartwatch','Earbuds','Tablet','Bluetooth Speaker','Power Bank','Camera','Router','Monitor'],
+  fashion:["Men's T-Shirt","Women's Kurti","Jeans","Sneakers","Saree","Backpack","Hoodie","Jacket","Watch","Sunglasses"],
+  home:["Mixer Grinder","Pressure Cooker","LED Bulb","Ceiling Fan","Vacuum Cleaner","Bedsheet","Dinner Set","Coffee Maker","Water Purifier","Table Lamp"],
+  beauty:["Perfume","Moisturizer","Shampoo","Conditioner","Makeup Kit","Lipstick","Face Wash","Body Lotion","Hair Oil","Nail Polish"],
+  sports:["Yoga Mat","Dumbbell","Tennis Racket","Cricket Bat","Football","Cycling Helmet","Running Shoes","Water Bottle","Sports Towel","Gym Bag"]
+};
+
+const products = [];
+let id=1;
+for(const cat of categories){ for(let i=0;i<20;i++){ const pname = namePools[cat][i%10] + ' ' + (i+1); const price = Number((100 + Math.random()*1900).toFixed(2)); const rating = Number((3 + Math.random()*2).toFixed(1)); const offer = Math.random()<0.25; const stock = Math.floor(5 + Math.random()*45); products.push({id:id++,name:pname,category:cat,price,rating,offer,stock,image:`https://picsum.photos/seed/${cat}${i}/400/300`,desc:`High quality ${cat} product named ${pname}. Good value for money.`}); }}
+// now products length = 100
+
+// App state
+let state = {query:'',category:'all',page:1,perPage:10,sortBy:'relevance',offerOnly:false,maxPrice:2000,minRating:0};
+let cart = JSON.parse(localStorage.getItem('mini_cart')||'[]');
+let wishlist = JSON.parse(localStorage.getItem('mini_wish')||'[]');
+let reviews = JSON.parse(localStorage.getItem('mini_reviews')||'{}');
+
+document.getElementById('year').innerText = new Date().getFullYear();
+render(); updateCartUI(); updateWishlistUI(); renderWishPreview();
+
+function render(){ applyFilters(); }
+
+function onSearch(){ state.query = document.getElementById('searchInput').value; state.page=1; applyFilters(); }
+function filterCategory(cat){ state.category = cat; state.page=1; applyFilters(); }
+function onPriceChange(v){ document.getElementById('priceVal').innerText = v; state.maxPrice = Number(v); }
+function changePerPage(v){ state.perPage = Number(v); state.page=1; applyFilters(); }
+function applyFilters(){ state.offerOnly = document.getElementById('offerOnly').checked; state.minRating = Number(document.getElementById('minRating').value); state.sortBy = document.getElementById('sortBy').value;
+  let list = products.filter(p=>{
+    if(state.category!=='all' && p.category!==state.category) return false;
+    if(state.query && !(p.name.toLowerCase().includes(state.query.toLowerCase()) || p.desc.toLowerCase().includes(state.query.toLowerCase()))) return false;
+    if(state.offerOnly && !p.offer) return false;
+    if(p.price > state.maxPrice) return false;
+    if(p.rating < state.minRating) return false;
+    return true;
+  });
+  // sort
+  if(state.sortBy==='price-asc') list.sort((a,b)=>a.price-b.price);
+  if(state.sortBy==='price-desc') list.sort((a,b)=>b.price-a.price);
+  if(state.sortBy==='rating') list.sort((a,b)=>b.rating-a.rating);
+  const total = list.length;
+  const pages = Math.max(1, Math.ceil(total/state.perPage)); if(state.page>pages) state.page=1;
+  const start=(state.page-1)*state.perPage; const visible=list.slice(start,start+state.perPage);
+  renderProducts(visible,total); renderPagination(pages);
+}
+
+function renderProducts(list,total){ const grid=document.getElementById('productGrid'); grid.innerHTML=''; list.forEach(p=>{ const el=document.createElement('div'); el.className='product card'; el.innerHTML = `\
+  <img src="${p.image}" alt="${p.name}"/>\
+  <div class="p-body">\
+    <div class="p-title">${p.name} ${p.offer?'<span class="badge">Deal</span>':''}</div>\
+    <div class="p-cat">${capitalize(p.category)} • ★ ${p.rating}</div>\
+    <div class="price">₹${p.price.toFixed(2)}</div>\
+    <div class="p-actions">\
+      <button class="btn" onclick="openProduct(${p.id})">View</button>\
+      <button class="btn" onclick="addToCart(${p.id})">Add</button>\
+      <button class="btn" onclick="toggleWishlist(${p.id})">♥</button>\
+    </div>\
+  </div>`; grid.appendChild(el); }); document.getElementById('resultsInfo').innerText = `(${total} results)`; }
+
+function renderPagination(pages){ const pdiv=document.getElementById('pagination'); pdiv.innerHTML=''; for(let i=1;i<=pages;i++){ const b=document.createElement('button'); b.className='page-btn'; b.innerText=i; if(i===state.page) b.style.fontWeight='700'; b.onclick=()=>{ state.page=i; applyFilters(); }; pdiv.appendChild(b); } }
+
+function openProduct(id){ const p = products.find(x=>x.id===id); const root=document.getElementById('modalRoot'); const m=document.createElement('div'); m.className='modal-back'; m.innerHTML = `\
+  <div class='modal card'>\
+    <div style="display:flex;justify-content:space-between;align-items:center">\
+      <h3>${p.name}</h3>\
+      <button class='btn' onclick="this.closest('.modal-back').remove()">Close</button>\
+    </div>\
+    <div style='display:flex;gap:12px;margin-top:12px'>\
+      <div style='flex:1'><img src='${p.image}' style='width:100%;border-radius:8px' /></div>\
+      <div style='flex:1'>\
+        <div style='font-weight:800;font-size:18px'>₹${p.price.toFixed(2)} ${p.offer?"<span class='badge'>Offer</span>":''}</div>\
+        <div class='p-cat' style='margin-top:6px'>${capitalize(p.category)} • ★ ${p.rating}</div>\
+        <p style='margin-top:12px'>${p.desc}</p>\
+        <div style='display:flex;gap:8px;margin-top:12px'>\
+          <button class='btn' onclick='addToCart(${p.id})'>Add to Cart</button>\
+          <button class='btn' onclick='toggleWishlist(${p.id})'>♥ Save</button>\
+        </div>\
+        <div style='margin-top:12px'><strong>Reviews</strong><div id='rev-${p.id}' style='margin-top:8px'></div></div>\
+        <div style='margin-top:8px'>Name: <input id='rv-name-${p.id}' class='small'/> Rating: <select id='rv-stars-${p.id}'><option>5</option><option>4</option><option>3</option><option>2</option><option>1</option></select> <button class='btn' onclick='submitReview(${p.id})'>Submit</button></div>\
+      </div>\
+    </div>\
+  </div>`; root.appendChild(m); renderReviews(p.id); }
+
+function submitReview(pid){ const name = document.getElementById('rv-name-'+pid).value || 'Anonymous'; const stars = Number(document.getElementById('rv-stars-'+pid).value); if(!reviews[pid]) reviews[pid]=[]; reviews[pid].unshift({name,stars,text:'Reviewed on demo'}); localStorage.setItem('mini_reviews',JSON.stringify(reviews)); renderReviews(pid); alert('Thanks for review'); }
+function renderReviews(pid){ const container = document.getElementById('rev-'+pid); if(!container) return; container.innerHTML=''; const list = reviews[pid]||[]; if(list.length===0) container.innerHTML='<div style="color:var(--muted)">No reviews yet</div>'; list.forEach(r=>{ const d=document.createElement('div'); d.style.borderTop='1px solid #eee'; d.style.paddingTop='6px'; d.innerHTML = `<strong>${r.name}</strong> • ${'★'.repeat(r.stars)}<div style='font-size:13px'>${r.text}</div>`; container.appendChild(d); }); }
+
+// Cart & Wishlist
+function addToCart(id){ const p=products.find(x=>x.id===id); const it = cart.find(c=>c.id===id); if(it){ if(it.qty < p.stock) it.qty++; } else cart.push({id:id,qty:1,price:p.price,name:p.name}); localStorage.setItem('mini_cart',JSON.stringify(cart)); updateCartUI(); alert('Added to cart'); }
+function removeFromCart(id){ cart = cart.filter(x=>x.id!==id); localStorage.setItem('mini_cart',JSON.stringify(cart)); updateCartUI(); }
+function changeQty(id,q){ const it = cart.find(x=>x.id===id); if(it){ it.qty = Math.max(1, Number(q)); localStorage.setItem('mini_cart',JSON.stringify(cart)); updateCartUI(); } }
+function clearCart(){ cart=[]; localStorage.setItem('mini_cart',JSON.stringify(cart)); updateCartUI(); }
+function updateCartUI(){ document.getElementById('cartCount').innerText = cart.reduce((s,i)=>s+i.qty,0); document.getElementById('cartTotal').innerText = cart.reduce((s,i)=>s+i.qty*i.price,0).toFixed(2); const list = document.getElementById('cartItems'); if(!list) return; list.innerHTML=''; if(cart.length===0) list.innerHTML='<div style="color:var(--muted)">Your cart is empty</div>'; cart.forEach(ci=>{ const p = products.find(x=>x.id===ci.id); const div=document.createElement('div'); div.className='cart-item'; div.innerHTML = `<img src='${p.image}' style='width:64px;height:48px;object-fit:cover;border-radius:6px' /><div style='flex:1'><div style='font-weight:700'>${p.name}</div><div style='color:var(--muted)'>₹${p.price.toFixed(2)}</div><div style='margin-top:6px'><input type='number' value='${ci.qty}' min='1' max='${p.stock}' onchange='changeQty(${ci.id}, this.value)' style='width:70px' /></div></div><div><button class='btn' onclick='removeFromCart(${ci.id})'>Remove</button></div>`; list.appendChild(div); }); }
+function openCart(){ document.getElementById('cartDrawer').style.display='block'; }
+function closeCart(){ document.getElementById('cartDrawer').style.display='none'; }
+function openCheckout(){ if(cart.length===0){ alert('Cart is empty'); return; } const total = cart.reduce((s,i)=>s+i.qty*i.price,0).toFixed(2); const root=document.getElementById('modalRoot'); const m=document.createElement('div'); m.className='modal-back'; m.innerHTML = `\
+  <div class='modal card'>\
+    <div style='display:flex;justify-content:space-between;align-items:center'>\
+      <h3>Checkout</h3><button class='btn' onclick="this.closest('.modal-back').remove()">Close</button>\
+    </div>\
+    <form onsubmit='submitCheckout(event)' style='margin-top:12px'>\
+      <div style='display:flex;gap:8px'><input required id='chk-name' placeholder='Full name' style='flex:1;padding:8px;border-radius:6px' /><input required id='chk-email' type='email' placeholder='Email' style='flex:1;padding:8px;border-radius:6px' /></div>\
+      <div style='margin-top:8px'><textarea required id='chk-addr' placeholder='Shipping address' style='width:100%;padding:8px;border-radius:6px'></textarea></div>\
+      <div style='margin-top:8px;display:flex;justify-content:space-between;align-items:center'><strong>Total: ₹${total}</strong><button class='btn' type='submit'>Place Order</button></div>\
+    </form>\
+  </div>`; root.appendChild(m); }
+function submitCheckout(e){ e.preventDefault(); alert('Order placed! (demo)'); clearCart(); e.target.closest('.modal-back').remove(); }
+
+function toggleWishlist(id){ if(!wishlist.includes(id)) wishlist.push(id); else wishlist = wishlist.filter(x=>x!==id); localStorage.setItem('mini_wish',JSON.stringify(wishlist)); updateWishlistUI(); renderWishPreview(); }
+function updateWishlistUI(){ document.getElementById('wishCount').innerText = wishlist.length; }
+function openWishlist(){ alert('Wishlist: ' + wishlist.length + ' items\nIDs: ' + wishlist.join(', ')); }
+function renderWishPreview(){ const div=document.getElementById('wishListPreview'); div.innerHTML=''; wishlist.slice(0,5).forEach(id=>{ const p=products.find(x=>x.id===id); if(!p) return; const el=document.createElement('div'); el.style.display='flex'; el.style.gap='8px'; el.style.alignItems='center'; el.style.marginTop='8px'; el.innerHTML = `<img src='${p.image}' style='width:48px;height:36px;object-fit:cover;border-radius:6px' /><div style='flex:1'><div style='font-weight:700'>${p.name}</div><div style='color:var(--muted)'>₹${p.price.toFixed(2)}</div></div><div><button class='btn' onclick='addToCart(${p.id})'>Add</button></div>`; div.appendChild(el); }); }
+
+// Reviews from storage
+function loadFromStorage(){ try{ reviews = JSON.parse(localStorage.getItem('mini_reviews')||'{}'); cart = JSON.parse(localStorage.getItem('mini_cart')||'[]'); wishlist = JSON.parse(localStorage.getItem('mini_wish')||'[]'); }catch(e){ cart=[]; wishlist=[]; reviews={}; } }
+loadFromStorage(); updateCartUI(); updateWishlistUI(); renderWishPreview();
+
+// Pagination helper
+function prevPage(){ if(state.page>1){ state.page--; applyFilters(); }}
+function nextPage(){ state.page++; applyFilters(); }
+
+function submitReviewForm(pid, name, stars, text){ if(!reviews[pid]) reviews[pid]=[]; reviews[pid].unshift({name,stars,text}); localStorage.setItem('mini_reviews',JSON.stringify(reviews)); }
+
+function capitalize(s){ return s.charAt(0).toUpperCase()+s.slice(1); }
+
+// Theme toggle
+function toggleTheme(){ if(document.documentElement.getAttribute('data-theme')==='dark'){ document.documentElement.removeAttribute('data-theme'); localStorage.removeItem('mini_theme'); } else { document.documentElement.setAttribute('data-theme','dark'); localStorage.setItem('mini_theme','dark'); } }
+if(localStorage.getItem('mini_theme')==='dark') document.documentElement.setAttribute('data-theme','dark');
+
+</script>
+</body>
+</html>
